@@ -30,6 +30,7 @@
 #include "x86.h"
 #include "plugin.h"
 #include "debugger.h"
+#include "SummerCart.h"
 
 
 DWORD *TLB_ReadMap, *TLB_WriteMap, RdramSize, SystemRdramSize;
@@ -1748,6 +1749,9 @@ int r4300i_LW_NonMemory ( DWORD PAddr, DWORD * Value ) {
 			return FALSE;
 		}
 		break;
+	case 0x1FF00000:
+		read_summercart_regs(NULL, PAddr, Value);
+		break;
 	default:
 		*Value = PAddr & 0xFFFF;
 		*Value = (*Value << 16) | *Value;
@@ -1769,10 +1773,53 @@ BOOL r4300i_LW_VAddr ( DWORD VAddr, DWORD * Value ) {
 	return TRUE;
 }
 
-BOOL r4300i_LW_VAddr_NonCPU ( DWORD VAddr, DWORD * Value ) {
+BOOL r4300i_LW_VAddr_NonCPU_impl ( DWORD VAddr, DWORD * Value ) {
 	if (TLB_ReadMap[VAddr >> 12] == 0) { return FALSE; }
 	*Value = *(DWORD *)(TLB_ReadMap[VAddr >> 12] + VAddr);
 	return TRUE;
+}
+
+BOOL r4300i_LW_VAddr_NonCPU(DWORD VAddr, DWORD* Value) {
+	OPCODE opcode;
+	BOOL ok = r4300i_LW_VAddr_NonCPU_impl(VAddr, &opcode.Hex);
+	if (!ok)
+		return FALSE;
+
+	// if (Config::get().decompSlowReset)
+	{
+		if (opcode.Hex == 0x14200005)
+		{
+			if ((VAddr & 0xFF000000) == 0x80000000)
+			{
+				const DWORD sBusyLoopPrologue[] = { 0x3C02A440, 0xA7380000, 0x8C830000, 0x34420010, 0x3C0CA440, 0x8C680008, 0x8D090004, 0xAC69000C, 0x8C4A0000, 0x2D41000B };
+				int sCheckSize = sizeof(sBusyLoopPrologue) / sizeof(*sBusyLoopPrologue);
+				int i;
+				for (i = 0; i < sCheckSize; i++)
+				{
+					DWORD ivaddr = VAddr - (sCheckSize - i) * 4;
+					DWORD val;
+					if (!r4300i_LW_VAddr_NonCPU_impl(ivaddr, &val))
+					{
+						break;
+					}
+
+					if (val != sBusyLoopPrologue[i])
+					{
+						break;
+					}
+				}
+
+				if (i == sCheckSize)
+				{
+					opcode.Hex = 0x10000005;
+				}
+			}
+		}
+	}
+
+	*Value = opcode.Hex;
+	return TRUE;
+
 }
 
 int r4300i_SB_NonMemory ( DWORD PAddr, BYTE Value ) {
@@ -2292,6 +2339,8 @@ int r4300i_SW_NonMemory ( DWORD PAddr, DWORD Value ) {
 		}
 		return FALSE;
 		break;
+	case 0x1FF00000:
+		write_summercart_regs(NULL, PAddr, Value, ~0);
 	default:
 		return FALSE;
 		break;

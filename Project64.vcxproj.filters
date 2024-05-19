@@ -279,6 +279,9 @@
     <ClCompile Include="WatchPoints.cpp">
       <Filter>Source Files\Debugger Source</Filter>
     </ClCompile>
+    <ClCompile Include="SummerCart.c">
+      <Filter>Source Files\CPU Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BreakPoints.h">
@@ -490,6 +493,9 @@
     </ClInclude>
     <ClInclude Include="WatchPoints.h">
       <Filter>Header Files\Debugger Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SummerCart.h">
+      <Filter>Source Files\CPU Source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

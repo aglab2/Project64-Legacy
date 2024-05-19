@@ -43,6 +43,7 @@
 #include "resource.h"
 #include "resource_cheat.h"
 #include "RomTools_Common.h"
+#include "SummerCart.h"
 
 LARGE_INTEGER Frequency, Frames[NoOfFrames], LastFrame;
 BOOL HaveDebugger, ShowDebugMessages, AutoLoadMapFile, ShowUnhandledMemory, ShowTLBMisses,
@@ -603,6 +604,9 @@ int InitalizeApplication(HINSTANCE hInstance) {
 		DisplayError(GS(MSG_MEM_ALLOC_ERROR));
 		return FALSE;
 	}
+
+	init_summercart(&SummerCart);
+	poweron_summercart(&SummerCart);
 
 	hPauseMutex = CreateMutex(NULL, FALSE, NULL);
 

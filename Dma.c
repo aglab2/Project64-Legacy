@@ -28,6 +28,7 @@
 #include "main.h"
 #include "debugger.h"
 #include "CPU.h"
+#include "SummerCart.h"
 
 int DMAUsed;
 
@@ -97,6 +98,74 @@ void PI_DMA_READ (void) {
 			CheckInterrupts();
 			break;
 		}
+		return;
+	}
+
+	if (PI_CART_ADDR_REG >= 0x10000000
+		&& PI_CART_ADDR_REG < 0x14000000)
+	{
+		//CART ROM
+		DWORD length = (PI_RD_LEN_REG & 0xFFFFFF) + 1;
+		DWORD i = (PI_CART_ADDR_REG - 0x10000000);
+		DWORD romsize = 0x40000000;
+
+		// TODO: add proper bounds check
+		length = (i + length) > romsize ?
+			(romsize - i) : length;
+		length = (PI_DRAM_ADDR_REG + length) > 0x7FFFFF ?
+			(0x7FFFFF - PI_DRAM_ADDR_REG) : length;
+
+		if (i > romsize || PI_DRAM_ADDR_REG > 0x7FFFFF || !SummerCart.cfg_rom_write)
+		{
+			PI_STATUS_REG &= ~PI_STATUS_DMA_BUSY;
+			MI_INTR_REG |= MI_INTR_PI;
+			CheckInterrupts();
+			return;
+		}
+
+		DWORD dram_address = PI_DRAM_ADDR_REG;
+		DWORD rom_address = (PI_CART_ADDR_REG - 0x10000000);
+		BYTE* dram = RDRAM;
+		BYTE* rom = ROM;
+
+		for (i = 0; i < length; ++i)
+			rom[(rom_address + i) ^ 3] = dram[(dram_address + i) ^ 3];
+
+		PI_STATUS_REG &= ~PI_STATUS_DMA_BUSY;
+		MI_INTR_REG |= MI_INTR_PI;
+		CheckInterrupts();
+		return;
+	}
+
+	if (PI_CART_ADDR_REG >= 0x1ffe0000 && PI_CART_ADDR_REG < 0x1fff0000)
+	{
+		//SC64 BUFFER
+		DWORD length = (PI_RD_LEN_REG & 0xFFFFFF) + 1;
+		DWORD i = (PI_CART_ADDR_REG - 0x1ffe0000);
+
+		length = (i + length) > 8192 ? (8192 - i) : length;
+		length = (PI_DRAM_ADDR_REG + length) > 0x7FFFFF ?
+			(0x7FFFFF - PI_DRAM_ADDR_REG) : length;
+
+		if (i > 8192 || PI_DRAM_ADDR_REG > 0x7FFFFF || !SummerCart.unlock)
+		{
+			PI_STATUS_REG &= ~PI_STATUS_DMA_BUSY;
+			MI_INTR_REG |= MI_INTR_PI;
+			CheckInterrupts();
+			return;
+		}
+
+		DWORD dram_address = PI_DRAM_ADDR_REG;
+		DWORD rom_address = (PI_CART_ADDR_REG - 0x1ffe0000);
+		BYTE* dram = RDRAM;
+		BYTE* rom = SummerCart.buffer;
+
+		for (i = 0; i < length; ++i)
+			rom[(rom_address + i) ^ 3] = dram[(dram_address + i) ^ 3];
+
+		PI_STATUS_REG &= ~PI_STATUS_DMA_BUSY;
+		MI_INTR_REG |= MI_INTR_PI;
+		CheckInterrupts();
 		return;
 	}
 
@@ -239,6 +308,38 @@ void PI_DMA_WRITE (void) {
 		CheckInterrupts();
 		//ChangeTimer(PiTimer,(int)(PI_WR_LEN_REG * 8.9) + 50);
 		//ChangeTimer(PiTimer,(int)(PI_WR_LEN_REG * 8.9));
+		CheckTimer();
+		return;
+	}
+
+	if (PI_CART_ADDR_REG >= 0x1ffe0000 && PI_CART_ADDR_REG < 0x1fff0000)
+	{
+		/* SC64 BUFFER */
+		DWORD length = (PI_WR_LEN_REG & 0xFFFFFE) + 2;
+		DWORD i = (PI_CART_ADDR_REG - 0x1ffe0000);
+		length = (i + length) > 8192 ? (8192 - i) : length;
+		length = (PI_DRAM_ADDR_REG + length) > 0x7FFFFF ?
+			(0x7FFFFF - PI_DRAM_ADDR_REG) : length;
+
+		if (i > 8192 || PI_DRAM_ADDR_REG > 0x7FFFFF || !SummerCart.unlock)
+		{
+			PI_STATUS_REG &= ~PI_STATUS_DMA_BUSY;
+			MI_INTR_REG |= MI_INTR_PI;
+			CheckInterrupts();
+			return;
+		}
+
+		DWORD dram_address = PI_DRAM_ADDR_REG;
+		DWORD rom_address = (PI_CART_ADDR_REG - 0x1ffe0000);
+		BYTE* dram = RDRAM;
+		BYTE* rom = SummerCart.buffer;
+
+		for (i = 0; i < length; ++i)
+			dram[(dram_address + i) ^ 3] = rom[(rom_address + i) ^ 3];
+
+		PI_STATUS_REG &= ~PI_STATUS_DMA_BUSY;
+		MI_INTR_REG |= MI_INTR_PI;
+		CheckInterrupts();
 		CheckTimer();
 		return;
 	}
