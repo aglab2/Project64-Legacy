@@ -1,6 +1,10 @@
 #include "SummerCart.h"
 
 #include <Windows.h>
+#include <Shlobj.h>
+#include <Shlobj_core.h>
+#include <shlwapi.h>
+
 extern BYTE* N64MEM, * RDRAM, * DMEM, * IMEM, * ROM;
 
 #include <stdlib.h>
@@ -61,7 +65,7 @@ static uint32_t summercart_sd_read()
     return 0;
 }
 
-static uint32_t summercart_sd_write(struct pi_controller* pi)
+static uint32_t summercart_sd_write()
 {
     size_t i;
     FILE* fp;
@@ -69,7 +73,7 @@ static uint32_t summercart_sd_write(struct pi_controller* pi)
     long offset = 512 * SummerCart.sd_sector;
     size_t size = 512 * SummerCart.data1;
     if (offset + size > SummerCart.sd_size) return 0x40000000;
-    if (!(ptr = summercart_sd_addr(pi, size))) return 0x40000000;
+    if (!(ptr = summercart_sd_addr(size))) return 0x40000000;
     if (!(fp = fopen(SummerCart.sd_path, "r+b"))) return 0x40000000;
     fseek(fp, offset, SEEK_SET);
     for (i = 0; i < size; ++i)
@@ -87,7 +91,20 @@ static uint32_t summercart_sd_write(struct pi_controller* pi)
 
 void init_summercart(struct summercart* summercart)
 {
-    summercart->sd_path = "D:\\Project64\\AUTO0.iso"; // getenv("PL_SD_CARD_IMAGE");
+    static char _strPath[1024];
+
+    SHGetFolderPath(NULL,
+        CSIDL_APPDATA,
+        NULL,
+        0,
+        _strPath);
+
+    PathAppend(_strPath, "PJ64Legacy");
+    CreateDirectory(_strPath, NULL); // can fail, ignore errors
+    size_t length = strlen(_strPath);
+    PathAppend(_strPath, "AUTO0.iso");
+
+    summercart->sd_path = _strPath;
 }
 
 void poweron_summercart(struct summercart* summercart)
@@ -126,7 +143,6 @@ int read_summercart_regs(void* opaque, uint32_t address, uint32_t* value)
 
 int write_summercart_regs(void* opaque, uint32_t address, uint32_t value, uint32_t mask)
 {
-    struct pi_controller* pi = (struct pi_controller*)opaque;
     uint32_t addr = address & 0xFFFF;
 
     if (addr == 0x10)
@@ -207,7 +223,7 @@ int write_summercart_regs(void* opaque, uint32_t address, uint32_t value, uint32
             case 0:
                 break;
             case 1:
-                SummerCart.status = summercart_sd_init(pi);
+                SummerCart.status = summercart_sd_init();
                 break;
             case 4:
                 SummerCart.sd_byteswap = 1;
@@ -224,10 +240,10 @@ int write_summercart_regs(void* opaque, uint32_t address, uint32_t value, uint32
             SummerCart.sd_sector = SummerCart.data0;
             break;
         case 's':
-            SummerCart.status = summercart_sd_read(pi);
+            SummerCart.status = summercart_sd_read();
             break;
         case 'S':
-            SummerCart.status = summercart_sd_write(pi);
+            SummerCart.status = summercart_sd_write();
             break;
         default:
             SummerCart.status = 0x40000000;
