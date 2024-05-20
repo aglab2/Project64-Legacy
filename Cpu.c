@@ -50,6 +50,8 @@ OPCODE Opcode;
 HANDLE hCPU;
 BOOL inFullScreen, CPURunning, SPHack;
 DWORD MemoryStack;
+CRITICAL_SECTION AudioMutex;
+char Initialized = 0;
 
 #ifdef CFB_READ
 DWORD CFBStart = 0, CFBEnd = 0;
@@ -87,6 +89,8 @@ void InitiliazeCPUFlags (void) {
 	CPURunning   = FALSE;
 	CurrentSaveSlot = ID_CURRENTSAVE_DEFAULT;
 	SPHack       = FALSE;
+
+	InitializeCriticalSection(&AudioMutex);
 }
 
 void ChangeCompareTimer(void) {
@@ -143,7 +147,7 @@ void CheckTimer (void) {
 	}
 }
 
-void CloseCpu (void) {
+void CloseCpu (char willReinit) {
 	DWORD ExitCode, OldProtect;
 	
 	if (CPU_Action.CloseCPU || !CPURunning || hCPU == NULL) { return; }
@@ -217,11 +221,17 @@ void CloseCpu (void) {
 	CloseMempak();
 	CloseSram();
 	FreeSyncMemory();
-	if (GfxRomClosed != NULL) { GfxRomClosed(); }
-	if (ContRomClosed != NULL) { ContRomClosed(); }
+	if (!willReinit) {
+		if (GfxRomClosed != NULL) { GfxRomClosed(); }
+		if (ContRomClosed != NULL) { ContRomClosed(); }
+		Initialized = 0;
+	}
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomClosed != NULL) { AiRomClosed(); }
+	LeaveCriticalSection(&AudioMutex);
 	if (RSPRomClosed != NULL) { RSPRomClosed(); }
 	if (Profiling) { GenerateTimerResults(); }
+	Initialized = 0;
 	CloseHandle(CPU_Action.hStepping);
 	SendMessage( hStatusWnd, SB_SETTEXT, 0, (LPARAM)GS(MSG_EMULATION_ENDED) );
 }
@@ -597,19 +607,25 @@ void Reset_CPU(void) {
 
 	//memcpy(RomHeader,ROM,sizeof(RomHeader));
 	ChangeCompareTimer();
-	if (GfxRomClosed != NULL) { GfxRomClosed(); }
+	// if (GfxRomClosed != NULL) { GfxRomClosed(); }
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomClosed != NULL) { AiRomClosed(); }
-	if (ContRomClosed != NULL) { ContRomClosed(); }
+	LeaveCriticalSection(&AudioMutex);
+	// if (ContRomClosed != NULL) { ContRomClosed(); }
 	if (RSPRomClosed) { RSPRomClosed(); }
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomOpen != NULL) { AiRomOpen(); }
-	if (GfxRomOpen != NULL) { GfxRomOpen(); }
-	if (ContRomOpen != NULL) { ContRomOpen(); }
+	LeaveCriticalSection(&AudioMutex);
+	// if (GfxRomOpen != NULL) { GfxRomOpen(); }
+	// if (ContRomOpen != NULL) { ContRomOpen(); }
 	if (RSPRomOpen != NULL) { RSPRomOpen(); }
 	DlistCount = 0;
 	AlistCount = 0;
 	AI_STATUS_REG = 0;
 	EmuAI_ClearAudio();
+	EnterCriticalSection(&AudioMutex);
 	AiDacrateChanged(SYSTEM_NTSC);
+	LeaveCriticalSection(&AudioMutex);
 	ViStatusChanged();
 	ViWidthChanged();
 	//SetupTLB();
@@ -663,6 +679,8 @@ BOOL Machine_LoadState(void) {
 	BOOL LoadedZipFile = FALSE;
 	HANDLE hSaveFile;
 	unzFile file;
+
+	DWORD start = Timer_now();
 
 	if (strlen(LoadFileName) == 0) {
 		Settings_GetDirectory(InstantSaveDir, Directory, sizeof(Directory));
@@ -889,19 +907,25 @@ BOOL Machine_LoadState(void) {
 	}
 	//memcpy(RomHeader,ROM,sizeof(RomHeader));
 	ChangeCompareTimer();
-	if (GfxRomClosed != NULL)  { GfxRomClosed(); }
+	// if (GfxRomClosed != NULL)  { GfxRomClosed(); }
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomClosed != NULL)   { AiRomClosed(); }
-	if (ContRomClosed != NULL) { ContRomClosed(); }
+	LeaveCriticalSection(&AudioMutex);
+	// if (ContRomClosed != NULL) { ContRomClosed(); }
 	if (RSPRomClosed) { RSPRomClosed(); }
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomOpen != NULL) { AiRomOpen(); }
-	if (GfxRomOpen != NULL) { GfxRomOpen(); }
-	if (ContRomOpen != NULL) { ContRomOpen(); }
+	LeaveCriticalSection(&AudioMutex);
+	// if (GfxRomOpen != NULL) { GfxRomOpen(); }
+	// if (ContRomOpen != NULL) { ContRomOpen(); }
 	if (RSPRomOpen != NULL) { RSPRomOpen(); }
 	DlistCount = 0;
 	AlistCount = 0;
 	AI_STATUS_REG = 0;
 	EmuAI_ClearAudio();
+	EnterCriticalSection(&AudioMutex);
 	AiDacrateChanged(SYSTEM_NTSC);
+	LeaveCriticalSection(&AudioMutex);
 	ViStatusChanged();
 	ViWidthChanged();
 	SetupTLB();
@@ -948,6 +972,11 @@ BOOL Machine_LoadState(void) {
 	}
 	sprintf(String,"%s %s",GS(MSG_LOADED_STATE),FileName);
 	SendMessage( hStatusWnd, SB_SETTEXT, 0, (LPARAM)String );
+
+	Timer_Reset();
+	DWORD end = Timer_now();
+	Timer_Adjust(end - start);
+
 	return TRUE;
 }
 
@@ -961,6 +990,8 @@ BOOL Machine_SaveState(void) {
 	if (Timers.CurrentTimerType != CompareTimer &&  Timers.CurrentTimerType != ViTimer) {
 		return FALSE;
 	}
+
+	DWORD start = Timer_now();
 	if (strlen(SaveAsFileName) == 0) {
 		Settings_GetDirectory(InstantSaveDir, Directory, sizeof(Directory));
 		sprintf(FileName,"%s%s",Directory,CurrentSave);
@@ -1083,6 +1114,9 @@ BOOL Machine_SaveState(void) {
 	strcpy(LoadFileName,"");
 	sprintf(String,"%s %s",GS(MSG_SAVED_STATE),FileName);
 	SendMessage( hStatusWnd, SB_SETTEXT, 0, (LPARAM)String );
+
+	DWORD end = Timer_now();
+	Timer_Adjust(end - start);
 	return TRUE;
 }
 

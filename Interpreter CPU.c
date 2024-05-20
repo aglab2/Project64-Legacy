@@ -732,6 +732,9 @@ void ExecuteInterpreterOpCode (void) {
 	}		
 }
 
+extern char Initialized;
+extern CRITICAL_SECTION AudioMutex;
+
 void __cdecl StartInterpreterCPU (void ) { 
 	if (CoInitialize(NULL) != S_OK) {
 		return;
@@ -739,9 +742,14 @@ void __cdecl StartInterpreterCPU (void ) {
 
 	NextInstruction = NORMAL;
 
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomOpen != NULL) { AiRomOpen(); }
-	if (GfxRomOpen != NULL) { GfxRomOpen(); }
-	if (ContRomOpen != NULL) { ContRomOpen(); }
+	LeaveCriticalSection(&AudioMutex);
+	if (!Initialized) {
+		if (GfxRomOpen != NULL) { GfxRomOpen(); }
+		if (ContRomOpen != NULL) { ContRomOpen(); }
+		Initialized = 1;
+	}
 	if (RSPRomOpen != NULL) { RSPRomOpen(); }
 	__try {
 		for (;;) {

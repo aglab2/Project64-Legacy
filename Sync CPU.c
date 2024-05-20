@@ -232,6 +232,9 @@ void StartErrorLog (void) {
 	Error_Message("");
 }
 
+extern char Initialized;
+extern CRITICAL_SECTION AudioMutex;
+
 void __cdecl StartSyncCPU (void ) { 
 	DWORD Addr;
 	BYTE * Block;
@@ -239,9 +242,14 @@ void __cdecl StartSyncCPU (void ) {
 	Start_x86_Log();
 #endif
 
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomOpen != NULL) { AiRomOpen(); }
-	if (GfxRomOpen != NULL) { GfxRomOpen(); }
-	if (ContRomOpen != NULL) { ContRomOpen(); }
+	LeaveCriticalSection(&AudioMutex);
+	if (!Initialized) {
+		if (GfxRomOpen != NULL) { GfxRomOpen(); }
+		if (ContRomOpen != NULL) { ContRomOpen(); }
+		Initialized = 1;
+	}
 	if (RSPRomOpen != NULL) { RSPRomOpen(); }
 	ResetRecompCode();
 	AllocateSyncMemory();

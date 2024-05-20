@@ -2863,6 +2863,9 @@ void MarkCodeBlock (DWORD PAddr) {
 	}
 }
 
+extern char Initialized;
+extern CRITICAL_SECTION AudioMutex;
+
 void __cdecl StartRecompilerCPU (void ) { 
 	DWORD Addr;
 	BYTE * Block;
@@ -2900,9 +2903,14 @@ void __cdecl StartRecompilerCPU (void ) {
 		}
 	}
 
+	EnterCriticalSection(&AudioMutex);
 	if (AiRomOpen != NULL) { AiRomOpen(); }
-	if (GfxRomOpen != NULL) { GfxRomOpen(); }
-	if (ContRomOpen != NULL) { ContRomOpen(); }
+	LeaveCriticalSection(&AudioMutex);
+	if (!Initialized) {
+		if (GfxRomOpen != NULL) { GfxRomOpen(); }
+		if (ContRomOpen != NULL) { ContRomOpen(); }
+		Initialized = 1;
+	}
 	if (RSPRomOpen != NULL) { RSPRomOpen(); }
 	ResetRecompCode();
 	memset(&N64_Blocks,0,sizeof(N64_Blocks));

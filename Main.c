@@ -1102,7 +1102,7 @@ LRESULT CALLBACK Main_Proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 						ShowCursor(TRUE);
 					}
 
-					CloseCpu();
+					CloseCpu(0 /*will reinit*/);
 					hMenu = GetMenu(hMainWindow);
 					EnableMenuItem(hMenu, ID_FILE_STARTEMULATION, MFS_ENABLED | MF_BYCOMMAND);
 					if (DrawScreen != NULL) 
@@ -2287,7 +2287,7 @@ void SetCurrentSaveState(HWND hWnd, int State) {
 
 
 void ShutdownApplication(void) {
-	CloseCpu();
+	CloseCpu(0 /*will reinit*/);
 	if (TargetInfo != NULL)
 		VirtualFree(TargetInfo, 0, MEM_RELEASE);
 	FreeRomBrowser();

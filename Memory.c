@@ -32,6 +32,7 @@
 #include "debugger.h"
 #include "SummerCart.h"
 
+extern CRITICAL_SECTION AudioMutex;
 
 DWORD *TLB_ReadMap, *TLB_WriteMap, RdramSize, SystemRdramSize;
 BYTE *N64MEM, *RDRAM, *DMEM, *IMEM, *ROM;
@@ -2239,8 +2240,10 @@ int r4300i_SW_NonMemory ( DWORD PAddr, DWORD Value ) {
 			CheckInterrupts();
 			break;
 		case 0x04500010: 
-			AI_DACRATE_REG = Value;  
+			AI_DACRATE_REG = Value;
+			EnterCriticalSection(&AudioMutex);
 			if (AiDacrateChanged != NULL) { AiDacrateChanged(SYSTEM_NTSC); }
+			LeaveCriticalSection(&AudioMutex);
 			break;
 		case 0x04500014:  AI_BITRATE_REG = Value; break;
 		default:

@@ -664,7 +664,7 @@ BOOL CALLBACK PluginSelectProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 			sprintf(String, "%s", PluginNames[index]);
 			Settings_Write(APPS_NAME, "Plugins", "Controller", String);
 			if (CPURunning) {
-				CloseCpu();
+				CloseCpu(0 /*will reinit*/);
 				ShutdownPlugins();
 				SetupPlugins(hMainWindow);
 				StartEmulation();

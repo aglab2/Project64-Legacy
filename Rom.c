@@ -756,8 +756,7 @@ DWORD WINAPI OpenChosenFile(LPVOID lpArgs) {
 		}
 		DrawMenuBar(hMainWindow);
 	}
-	Sleep(100); // Adjusted down to 100ms from 1000ms
-	CloseCpu();
+	CloseCpu(1 /*will reinit*/);
 	if (HaveDebugger)
 		ResetMappings();
 	SetNewFileDirectory();
@@ -812,7 +811,6 @@ DWORD WINAPI OpenChosenFile(LPVOID lpArgs) {
 					len += unzReadCurrentFile(file, &ROM[count], ReadFromRomSection);
 					sprintf(Message, "%s: %.2f%c", GS(MSG_LOADED), ((float)len / (float)RomFileSize) * 100.0f, '%');
 					SendMessage(hStatusWnd, SB_SETTEXT, 0, (LPARAM)Message);
-					Sleep(10); // Adjusted down to 10ms from 100ms
 				}
 				if ((int)RomFileSize != len) {
 					unzCloseCurrentFile(file);
@@ -914,7 +912,6 @@ DWORD WINAPI OpenChosenFile(LPVOID lpArgs) {
 			TotalRead += dwRead;
 			sprintf(Message, "%s: %.2f%c", GS(MSG_LOADED), ((float)TotalRead / (float)RomFileSize) * 100.0f, '%');
 			SendMessage(hStatusWnd, SB_SETTEXT, 0, (LPARAM)Message);
-			Sleep(10); // Adjusted down to 10ms from 100ms
 		}
 		dwRead = TotalRead;
 
@@ -998,7 +995,6 @@ DWORD WINAPI OpenChosenFile(LPVOID lpArgs) {
 	SendMessage(hStatusWnd, SB_SETTEXT, 0, (LPARAM)WinTitle);
 	if (AutoStart) {
 		StartEmulation();
-		Sleep(100);
 		if (AutoFullScreen) {
 			char Status[100], Identifier[100], result[100], * read;
 

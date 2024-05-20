@@ -27,3 +27,10 @@ void Timer_Initialize  ( double Hertz);
 void Timer_Start       ( void );
 void Timer_Stop        ( void );
 BOOL Timer_Process     ( DWORD * FrameRate );
+void Timer_Adjust(DWORD);
+void Timer_Reset(void);
+static inline DWORD Timer_now()
+{
+	return timeGetTime();
+}
+

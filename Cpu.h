@@ -77,7 +77,7 @@ typedef struct {
 void ChangeCompareTimer(void);
 void ChangeTimer(int Type, int Value);
 void CheckTimer(void);
-void CloseCpu(void);
+void CloseCpu(char willReinit);
 int  DelaySlotEffectsCompare(DWORD PC, DWORD Reg1, DWORD Reg2);
 int  DelaySlotEffectsJump(DWORD JumpPC);
 void DoSomething(void);
