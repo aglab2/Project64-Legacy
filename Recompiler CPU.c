@@ -1962,6 +1962,21 @@ CPU_Message("PermLoop ***");
 	}
 }
 
+#define MAX_CF0_CYCLE_COUNT 1
+
+static inline r4300i_LW_VAddr_NonCPU_CF0(BLOCK_SECTION* Section, DWORD* Value)
+{
+#if MAX_CF0_CYCLE_COUNT == 1
+	if (BlockCycleCount)
+#else
+	if (BlockCycleCount > MAX_CF0_CYCLE_COUNT)
+#endif
+	{
+		BlockCycleCount = MAX_CF0_CYCLE_COUNT;
+	}
+	return r4300i_LW_VAddr_NonCPU(Section->CompilePC, Value);
+}
+
 BOOL GenerateX86Code (BLOCK_SECTION * Section, DWORD Test) {
 	int count;
 
@@ -2003,7 +2018,7 @@ BOOL GenerateX86Code (BLOCK_SECTION * Section, DWORD Test) {
 	}*/
 	do {
 		__try {
-			if (!r4300i_LW_VAddr_NonCPU(Section->CompilePC, &Opcode.Hex)) {
+			if (!r4300i_LW_VAddr_NonCPU_CF0(Section, &Opcode.Hex)) {
 				DisplayError(GS(MSG_FAIL_LOAD_WORD));
 				ExitThread(0);
 			} 

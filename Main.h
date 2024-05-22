@@ -97,7 +97,7 @@ extern "C" {
 #define ModCode_CheckMemory2		7 // *** Add in Build 53
 
 /********** Counter Factor ***********/
-#define Default_CountPerOp			2
+#define Default_CountPerOp			1
 
 /************ Debugging **************/
 #define Default_HaveDebugger		FALSE

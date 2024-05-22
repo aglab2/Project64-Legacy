@@ -756,7 +756,7 @@ DWORD WINAPI OpenChosenFile(LPVOID lpArgs) {
 		}
 		DrawMenuBar(hMainWindow);
 	}
-	CloseCpu(1 /*will reinit*/);
+	CloseCpu(0 /*will reinit*/);
 	if (HaveDebugger)
 		ResetMappings();
 	SetNewFileDirectory();
