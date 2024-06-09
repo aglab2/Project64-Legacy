@@ -1964,7 +1964,7 @@ CPU_Message("PermLoop ***");
 
 #define MAX_CF0_CYCLE_COUNT 1
 
-#if 0
+#if 1
 static BOOL r4300i_LW_VAddr_NonCPU_CF0(BLOCK_SECTION* Section, DWORD* Value)
 {
 #if MAX_CF0_CYCLE_COUNT == 1
