@@ -1964,7 +1964,8 @@ CPU_Message("PermLoop ***");
 
 #define MAX_CF0_CYCLE_COUNT 1
 
-static inline r4300i_LW_VAddr_NonCPU_CF0(BLOCK_SECTION* Section, DWORD* Value)
+#if 0
+static BOOL r4300i_LW_VAddr_NonCPU_CF0(BLOCK_SECTION* Section, DWORD* Value)
 {
 #if MAX_CF0_CYCLE_COUNT == 1
 	if (BlockCycleCount)
@@ -1976,6 +1977,12 @@ static inline r4300i_LW_VAddr_NonCPU_CF0(BLOCK_SECTION* Section, DWORD* Value)
 	}
 	return r4300i_LW_VAddr_NonCPU(Section->CompilePC, Value);
 }
+#else
+static BOOL r4300i_LW_VAddr_NonCPU_CF0(BLOCK_SECTION* Section, DWORD* Value)
+{
+	return r4300i_LW_VAddr_NonCPU(Section->CompilePC, Value);
+}
+#endif
 
 BOOL GenerateX86Code (BLOCK_SECTION * Section, DWORD Test) {
 	int count;
